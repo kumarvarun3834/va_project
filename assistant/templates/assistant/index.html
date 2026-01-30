@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Nova - Your Virtual Assistant</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <!-- Optional Bootstrap (for smoother UI later) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', sans-serif;
+            background: linear-gradient(to top right, #000428, #004e92);
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: -260px;
+            width: 250px;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            transition: left 0.3s ease;
+            padding: 20px;
+            overflow-y: auto;
+            z-index: 1000;
+        }
+
+        .sidebar.active {
+            left: 0;
+        }
+
+        .sidebar h3 {
+            margin-top: 0;
+            color: #00c853;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar li {
+            padding: 8px 10px;
+            margin-bottom: 6px;
+            background: #222;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .toggle-btn {
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #00c853;
+            box-shadow: 0 5px 10px rgba(0, 255, 128, 0.466);
+            transition: transform 0.2s, left 0.3s ease;
+        }
+
+        .toggle-btn:hover {
+            transform: scale(1.1);
+        }
+
+        /* Header */
+        .header {
+            margin-top: 25px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 2em;
+        }
+
+        .header h2 {
+            font-size: 1em;
+            color: #ccc;
+            font-weight: normal;
+        }
+
+        /* Chat box */
+        .chat-box {
+            background: rgba(255, 255, 255, 0.08);
+            /* slight transparency for glass effect */
+            backdrop-filter: blur(12px);
+            /* frosted glass effect */
+            border-radius: 20px;
+            /* more rounded corners */
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            /* subtle border for depth */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+            /* soft shadow for elevation */
+            width: 95%;
+            max-width: 700px;
+            height: 75vh;
+            margin: 15px auto;
+            padding: 10px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            scroll-behavior: smooth;
+            transition: all 0.3s ease;
+            /* smooth hover effects if needed */
+        }
+
+        /* Optional: Add hover effect for subtle interactivity */
+        .chat-box:hover {
+            box-shadow: 5px 20px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .message {
+            max-width: 80%;
+            padding: 10px 15px;
+            border-radius: 15px;
+            line-height: 1.4;
+        }
+
+        .user {
+            background: #00c853;
+            align-self: flex-end;
+            color: #fff;
+            border-bottom-right-radius: 0;
+        }
+
+        .assistant {
+            background: #2a72ddc0;
+            align-self: flex-start;
+            color: #fff;
+            border-bottom-left-radius: 0;
+        }
+
+        /* Input */
+        .input-area {
+            width: 90%;
+            max-width: 700px;
+            display: flex;
+            margin: 0 auto 15px auto;
+            gap: 10px;
+        }
+
+        .input-area input {
+            flex-grow: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        .input-area button {
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            background: #00c853;
+            color: white;
+            transition: transform 0.2s;
+        }
+
+        .input-area button:hover {
+            transform: scale(1.05);
+        }
+
+        .mic-btn {
+            background-color: #2962ff;
+        }
+
+        .speak-btn {
+            background-color: #ff9800;
+            padding: 12px 16px;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+            color: white;
+            transition: transform 0.2s, background-color 0.3s;
+        }
+
+        .speak-btn:hover {
+            transform: scale(1.05);
+        }
+
+        .speak-btn:disabled {
+            background-color: #666;
+            cursor: not-allowed;
+            opacity: 0.5;
+        }
+
+        .speak-btn.speaking {
+            background-color: #f44336;
+        }
+
+        /* Wave animation */
+        .wave {
+            margin-top: 10px;
+            display: flex;
+            justify-content: center;
+            gap: 6px;
+        }
+
+        .wave div {
+            width: 6px;
+            height: 18px;
+            background: #fff;
+            border-radius: 5px;
+            animation: wave 1s infinite ease-in-out;
+        }
+
+        .wave div:nth-child(2) {
+            animation-delay: 0.1s;
+        }
+
+        .wave div:nth-child(3) {
+            animation-delay: 0.2s;
+        }
+
+        .active-chat {
+            background: #00c853 !important;
+            color: #fff !important;
+        }
+
+        @keyframes wave {
+
+            0%,
+            100% {
+                transform: scaleY(1);
+            }
+
+            50% {
+                transform: scaleY(1.8);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <h3>Chat History</h3>
+        <div class="d-grid gap-2 mb-3">
+            <button class="btn btn-success w-100" onclick="newChat()">➕ New Chat</button>
+        </div>
+        <ul id="history"></ul>
+    </div>
+    <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
+
+    <div class="header">
+        <h1>Welcome to Nova</h1>
+        <h2>An AI Assistant</h2>
+    </div>
+
+    <div class="chat-box" id="chat-box"></div>
+
+    <div class="input-area">
+        <input type="text" id="command" placeholder="Ask me anything...">
+        <button id="send-btn">Send</button>
+        <button class="mic-btn" id="mic-btn">🎤</button>
+        <button class="speak-btn" id="speak-btn" disabled title="Click to speak the assistant's response or stop">🔊 Speak</button>
+    </div>
+
+    <div class="wave" id="wave-animation" style="display:none;">
+        <div></div>
+        <div></div>
+        <div></div>
+    </div>
+
+    <!-- JavaScript for chat -->
+    <script>
+        const sendBtn = document.getElementById("send-btn");
+        const micBtn = document.getElementById("mic-btn");
+        const speakBtn = document.getElementById("speak-btn");
+        const input = document.getElementById("command");
+        const chatBox = document.getElementById("chat-box");
+        const wave = document.getElementById("wave-animation");
+        const historyList = document.getElementById("history");
+
+        let currentSession = null;
+        let lastAssistantMessage = ""; // Store last assistant message for speak functionality
+        let speechUtterance = null; // Store current speech utterance
+        let isSpeaking = false; // Track if currently speaking
+
+        function toggleSidebar() {
+            const sidebar = document.getElementById("sidebar");
+            const toggleBtn = document.querySelector(".toggle-btn");
+
+            sidebar.classList.toggle("active");
+
+            if (sidebar.classList.contains("active")) {
+                // Move button to the right edge of the sidebar
+                toggleBtn.style.left = sidebar.offsetWidth + 10 + "px"; // 10px gap
+            } else {
+                // Move back to original position
+                toggleBtn.style.left = "15px";
+            }
+        }
+
+        function newChat() {
+            currentSession = null;  // reset session
+            chatBox.innerHTML = ""; // clear messages
+            lastAssistantMessage = "";
+            speakBtn.disabled = true;
+            stopSpeech();
+            appendMessage("🆕 New chat started. Ask me anything!", "assistant");
+        }
+
+        function formatText(text) {
+            /*
+            Format text with proper spacing, line breaks, and markdown:
+            - Handle newlines as paragraphs
+            - Parse numbered lists (1. 2. 3.)
+            - Parse bullet points
+            - Parse markdown: **bold**, *italic*, `code`
+            */
+            let html = text;
+            
+            // Split by double newlines to create paragraphs
+            let paragraphs = html.split(/\n\n+/);
+            html = paragraphs.map(para => {
+                para = para.trim();
+                
+                // Handle numbered lists
+                if (/^\d+\.\s/.test(para)) {
+                    let lines = para.split('\n');
+                    let listHtml = '<ol style="margin: 10px 0; padding-left: 20px;">';
+                    lines.forEach(line => {
+                        let match = line.match(/^(\d+\.\s)(.*)$/);
+                        if (match) {
+                            listHtml += '<li style="margin: 5px 0;">' + formatInline(match[2]) + '</li>';
+                        }
+                    });
+                    listHtml += '</ol>';
+                    return listHtml;
+                }
+                
+                // Handle bullet points
+                if (/^[-*]\s/.test(para)) {
+                    let lines = para.split('\n');
+                    let listHtml = '<ul style="margin: 10px 0; padding-left: 20px;">';
+                    lines.forEach(line => {
+                        let match = line.match(/^[-*]\s(.*)$/);
+                        if (match) {
+                            listHtml += '<li style="margin: 5px 0;">' + formatInline(match[1]) + '</li>';
+                        }
+                    });
+                    listHtml += '</ul>';
+                    return listHtml;
+                }
+                
+                // Regular paragraph with inline formatting
+                return '<p style="margin: 10px 0; line-height: 1.6;">' + formatInline(para) + '</p>';
+            }).join('');
+            
+            return html;
+        }
+        
+        function formatInline(text) {
+            /*
+            Parse inline markdown:
+            **text** -> <strong>text</strong>
+            __text__ -> <strong>text</strong>
+            *text* -> <em>text</em>
+            _text_ -> <em>text</em>
+            `text` -> <code>text</code>
+            */
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')  // **bold**
+                .replace(/__(.*?)__/g, '<strong>$1</strong>')     // __bold__
+                .replace(/\*(.*?)\*/g, '<em>$1</em>')             // *italic*
+                .replace(/_(.*?)_/g, '<em>$1</em>')               // _italic_
+                .replace(/`(.*?)`/g, '<code style="background: rgba(0,0,0,0.3); padding: 2px 6px; border-radius: 3px;">$1</code>');  // `code`
+        }
+
+        function appendMessage(message, type) {
+            const msgDiv = document.createElement("div");
+            msgDiv.classList.add("message", type);
+            
+            if (type === "assistant") {
+                // Stop any currently speaking text
+                stopSpeech();
+                
+                // Format and parse markdown for assistant messages
+                msgDiv.innerHTML = formatText(message);
+                lastAssistantMessage = message; // Store raw message for TTS
+                speakBtn.disabled = false; // Enable speak button
+                speakBtn.textContent = "🔊 Speak"; // Reset button text
+                isSpeaking = false; // Reset speaking state
+            } else {
+                msgDiv.textContent = message;
+            }
+            
+            chatBox.appendChild(msgDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function cleanMarkdownForSpeech(text) {
+            /*
+            Remove markdown syntax for clean text-to-speech
+            */
+            return text
+                .replace(/\*\*(.*?)\*\*/g, '$1')  // Remove **bold**
+                .replace(/__(.*?)__/g, '$1')     // Remove __bold__
+                .replace(/\*(.*?)\*/g, '$1')     // Remove *italic*
+                .replace(/_(.*?)_/g, '$1')       // Remove _italic_
+                .replace(/`(.*?)`/g, '$1');      // Remove `code`
+        }
+
+        function toggleSpeech() {
+            if (isSpeaking) {
+                stopSpeech();
+            } else {
+                speakLastMessage();
+            }
+        }
+
+        function speakLastMessage() {
+            if (!lastAssistantMessage) {
+                console.log("No message to speak");
+                return;
+            }
+
+            // Make sure any previous speech is stopped first
+            if (window.speechSynthesis.speaking) {
+                window.speechSynthesis.cancel();
+            }
+
+            // Clean markdown before speaking
+            const cleanText = cleanMarkdownForSpeech(lastAssistantMessage);
+
+            // Use Web Speech API
+            if ('speechSynthesis' in window) {
+                speechUtterance = new SpeechSynthesisUtterance(cleanText);
+                speechUtterance.rate = 1.0;
+                speechUtterance.pitch = 1.0;
+                speechUtterance.volume = 1.0;
+
+                speechUtterance.onstart = () => {
+                    isSpeaking = true;
+                    speakBtn.classList.add("speaking");
+                    speakBtn.textContent = "⏹ Stop";
+                    console.log("Speech started");
+                };
+
+                speechUtterance.onend = () => {
+                    isSpeaking = false;
+                    speakBtn.classList.remove("speaking");
+                    speakBtn.textContent = "🔊 Speak";
+                    console.log("Speech ended");
+                };
+
+                speechUtterance.onerror = (event) => {
+                    console.error("Speech error", event);
+                    isSpeaking = false;
+                    speakBtn.classList.remove("speaking");
+                    speakBtn.textContent = "🔊 Speak";
+                };
+
+                window.speechSynthesis.speak(speechUtterance);
+            } else {
+                alert("Text-to-Speech not supported in this browser.");
+            }
+        }
+
+        function stopSpeech() {
+            try {
+                if ('speechSynthesis' in window) {
+                    window.speechSynthesis.cancel();
+                    // Force immediate state update
+                    isSpeaking = false;
+                    speakBtn.classList.remove("speaking");
+                    speakBtn.textContent = "🔊 Speak";
+                    console.log("Speech stopped");
+                }
+            } catch (e) {
+                console.error("Error stopping speech:", e);
+            }
+        }
+
+        async function loadSessions() {
+            try {
+                const res = await fetch("/sessions/");
+                const data = await res.json();
+                historyList.innerHTML = "";
+
+                data.sessions.forEach(s => {
+                    // Create container for each history item
+                    const itemContainer = document.createElement("div");
+                    itemContainer.style.display = "flex";
+                    itemContainer.style.alignItems = "center";
+                    itemContainer.style.gap = "8px";
+                    itemContainer.style.marginBottom = "6px";
+
+                    // Create the history list item
+                    const li = document.createElement("li");
+                    li.textContent = s.title;
+                    li.style.cursor = "pointer";
+                    li.style.flex = "1";
+                    li.style.padding = "8px 10px";
+                    li.style.background = "#222";
+                    li.style.borderRadius = "6px";
+
+                    if (s.id === currentSession) {
+                        li.classList.add("active-chat");
+                    }
+
+                    li.onclick = () => {
+                        currentSession = s.id; // set current session immediately
+                        loadHistory(s.id);
+                        loadSessions(); // refresh to update highlighting
+                    };
+
+                    // Create edit button
+                    const editBtn = document.createElement("button");
+                    editBtn.textContent = "✏️";
+                    editBtn.style.padding = "6px 10px";
+                    editBtn.style.border = "none";
+                    editBtn.style.background = "#2196F3";
+                    editBtn.style.color = "white";
+                    editBtn.style.borderRadius = "5px";
+                    editBtn.style.cursor = "pointer";
+                    editBtn.style.fontSize = "14px";
+                    editBtn.title = "Edit this chat name";
+                    editBtn.onclick = (e) => {
+                        e.stopPropagation(); // Don't trigger the chat load
+                        editChat(s.id, s.title);
+                    };
+
+                    // Create delete button
+                    const deleteBtn = document.createElement("button");
+                    deleteBtn.textContent = "🗑️";
+                    deleteBtn.style.padding = "6px 10px";
+                    deleteBtn.style.border = "none";
+                    deleteBtn.style.background = "#f44336";
+                    deleteBtn.style.color = "white";
+                    deleteBtn.style.borderRadius = "5px";
+                    deleteBtn.style.cursor = "pointer";
+                    deleteBtn.style.fontSize = "14px";
+                    deleteBtn.title = "Delete this chat";
+                    deleteBtn.onclick = (e) => {
+                        e.stopPropagation(); // Don't trigger the chat load
+                        deleteChat(s.id);
+                    };
+
+                    // Assemble the container
+                    itemContainer.appendChild(li);
+                    itemContainer.appendChild(editBtn);
+                    itemContainer.appendChild(deleteBtn);
+                    historyList.appendChild(itemContainer);
+                });
+            } catch (err) {
+                console.error("Error loading sessions", err);
+            }
+        }
+
+        async function deleteChat(sessionId) {
+            // Confirm deletion
+            if (!confirm("Are you sure you want to delete this chat?")) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/delete-session/${sessionId}/`, {
+                    method: "DELETE"
+                });
+
+                if (res.ok) {
+                    console.log("Chat deleted successfully");
+                    
+                    // If deleting the current session, start a new chat
+                    if (currentSession === sessionId) {
+                        currentSession = null;
+                        chatBox.innerHTML = "";
+                        lastAssistantMessage = "";
+                        speakBtn.disabled = true;
+                    }
+
+                    // Reload sessions
+                    loadSessions();
+                } else {
+                    alert("Failed to delete chat");
+                }
+            } catch (err) {
+                console.error("Error deleting chat", err);
+                alert("Error deleting chat");
+            }
+        }
+
+        async function editChat(sessionId, currentTitle) {
+            // Prompt user for new title
+            const newTitle = prompt("Enter new chat name:", currentTitle);
+            
+            // Return if user cancelled or entered empty string
+            if (newTitle === null || newTitle.trim() === "") {
+                return;
+            }
+
+            try {
+                const res = await fetch(`/update-session/${sessionId}/`, {
+                    method: "PUT",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify({ title: newTitle.trim() })
+                });
+
+                if (res.ok) {
+                    console.log("Chat name updated successfully");
+                    // Reload sessions to show updated name
+                    loadSessions();
+                } else {
+                    alert("Failed to update chat name");
+                }
+            } catch (err) {
+                console.error("Error updating chat name", err);
+                alert("Error updating chat name");
+            }
+        }
+
+        async function loadHistory(sessionId) {
+            try {
+                // Stop any currently speaking text when loading history
+                stopSpeech();
+                
+                const res = await fetch(`/history/${sessionId}/`);
+                const data = await res.json();
+                chatBox.innerHTML = "";
+                data.history.forEach(m => appendMessage(m.content, m.role));
+                currentSession = sessionId;
+            } catch (err) {
+                console.error("Error loading history", err);
+            }
+        }
+
+        async function sendCommand(command) {
+            appendMessage(command, "user");
+            input.value = "";
+            wave.style.display = "flex";
+
+            let url = currentSession ? `/ask/${currentSession}/` : "/ask/";
+
+            try {
+                const res = await fetch(url, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ command })
+                });
+
+                const data = await res.json();
+                currentSession = data.session_id;
+                appendMessage(data.response, "assistant");
+
+                loadSessions();
+            } catch (error) {
+                appendMessage("⚠️ Error: Could not reach server.", "assistant");
+            } finally {
+                wave.style.display = "none";
+            }
+        }
+
+        sendBtn.addEventListener("click", () => {
+            const command = input.value.trim();
+            if (command) sendCommand(command);
+        });
+
+        input.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") sendBtn.click();
+        });
+
+        speakBtn.addEventListener("click", toggleSpeech);
+
+        micBtn.addEventListener("click", () => {
+            if (!('webkitSpeechRecognition' in window)) {
+                alert("Speech Recognition not supported in this browser.");
+                return;
+            }
+
+            const recognition = new webkitSpeechRecognition();
+            recognition.lang = "en-US";
+            recognition.interimResults = false;
+            recognition.maxAlternatives = 1;
+
+            recognition.start();
+            micBtn.textContent = "🎙️";
+
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                sendCommand(transcript);
+            };
+
+            recognition.onerror = () => micBtn.textContent = "🎤";
+            recognition.onend = () => micBtn.textContent = "🎤";
+        });
+
+        window.onload = loadSessions;
+    </script>
+</body>
+
+</html>
