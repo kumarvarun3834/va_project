@@ -102,7 +102,7 @@
         .chat-box {
             background: rgba(255, 255, 255, 0.08);
             /* slight transparency for glass effect */
-            backdrop-filter: blur(12px);
+            /* backdrop-filter: blur(12px); */ /*isnt supported by windows */
             /* frosted glass effect */
             border-radius: 20px;
             /* more rounded corners */
@@ -653,34 +653,135 @@
 
         async function sendCommand(command) {
             appendMessage(command, "user");
-            input.value = "";
-            wave.style.display = "flex";
+    input.value = "";
+    wave.style.display = "flex";
 
-            let url = currentSession ? `/ask/${currentSession}/` : "/ask/";
+    let url = currentSession ? `/ask/${currentSession}/` : "/ask/";
 
-            try {
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ command })
-                });
+    try {
+        const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ command })
+        });
 
-                const data = await res.json();
-                currentSession = data.session_id;
-                appendMessage(data.response, "assistant");
+        const data = await res.json();
+        currentSession = data.session_id;
 
-                loadSessions();
-            } catch (error) {
-                appendMessage("⚠️ Error: Could not reach server.", "assistant");
-            } finally {
-                wave.style.display = "none";
-            }
+        // 🔥 HANDLE RESPONSE TYPES
+        if (data.type === "text") {
+            appendMessage(data.message, "assistant");
+        } 
+        else if (data.type === "action") {
+            handleAction(data);
+        } 
+        else {
+            appendMessage("⚠️ Invalid response from server", "assistant");
         }
 
+        loadSessions();
+
+    } catch (error) {
+        appendMessage("⚠️ Error: Could not reach server.", "assistant");
+            } finally {
+            wave.style.display = "none";
+        }
+}
         sendBtn.addEventListener("click", () => {
             const command = input.value.trim();
             if (command) sendCommand(command);
         });
+
+        function handleAction(data) {
+    const cmd = data.command;
+
+    switch (cmd) {
+
+        // 🌐 Open any URL
+        case "open_url":
+            window.open(data.url, "_blank");
+            appendMessage("Opening " + data.url, "assistant");
+            break;
+
+        // 🔍 Search
+        case "search":
+            window.open(`https://www.google.com/search?q=${encodeURIComponent(data.query)}`);
+            appendMessage("Searching for " + data.query, "assistant");
+            break;
+
+        // 📺 YouTube
+        case "youtube":
+            window.open("https://www.youtube.com/");
+            appendMessage("Opening YouTube", "assistant");
+            break;
+
+        // 🎵 Spotify
+        case "spotify":
+            window.open("https://open.spotify.com/");
+            appendMessage("Opening Spotify", "assistant");
+            break;
+
+        // 💬 WhatsApp
+        case "whatsapp":
+            if (data.number) {
+                window.open(`https://wa.me/${data.number}`);
+                appendMessage("Opening WhatsApp chat", "assistant");
+            } else {
+                window.open("https://wa.me/");
+                appendMessage("Opening WhatsApp", "assistant");
+            }
+            break;
+
+        // 📞 Call (works on mobile)
+        case "call":
+            if (data.number) {
+                window.open(`tel:${data.number}`);
+                appendMessage("Calling " + data.number, "assistant");
+            } else {
+                appendMessage("⚠️ No number provided", "assistant");
+            }
+            break;
+
+        // 📍 Maps / Navigation
+        case "maps":
+            if (data.place) {
+                window.open(`https://www.google.com/maps/search/${encodeURIComponent(data.place)}`);
+                appendMessage("Showing location: " + data.place, "assistant");
+            } else {
+                appendMessage("⚠️ No location provided", "assistant");
+            }
+            break;
+
+        // 📤 Share (mobile-friendly)
+        case "share":
+            if (navigator.share) {
+                navigator.share({
+                    title: data.title || "Nova",
+                    text: data.text || "",
+                    url: data.url || window.location.href
+                });
+            } else {
+                appendMessage("⚠️ Sharing not supported on this device", "assistant");
+            }
+            break;
+
+        // 📋 Clipboard
+        case "copy":
+            navigator.clipboard.writeText(data.text || "");
+            appendMessage("Copied to clipboard", "assistant");
+            break;
+
+        // ❌ Unsupported (desktop-only actions)
+        case "open_notepad":
+        case "open_file":
+        case "run_script":
+            appendMessage("⚠️ This action is not supported in browser.", "assistant");
+            break;
+
+        default:
+            appendMessage("⚠️ Unknown action: " + cmd, "assistant");
+    }
+}
 
         input.addEventListener("keydown", (e) => {
             if (e.key === "Enter") sendBtn.click();
